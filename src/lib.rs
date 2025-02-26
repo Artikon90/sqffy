@@ -5,6 +5,7 @@ pub mod config;
 pub mod db;
 pub mod error;
 pub mod i18n;
+pub mod sql;
 pub mod ui;
 
 pub use cli::Cli;
