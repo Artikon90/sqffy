@@ -6,6 +6,7 @@ pub mod config;
 pub mod db;
 pub mod error;
 pub mod i18n;
+pub mod meta;
 pub mod render;
 pub mod sql;
 pub mod ui;
