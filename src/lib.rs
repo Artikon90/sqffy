@@ -8,6 +8,7 @@ pub mod error;
 pub mod i18n;
 pub mod meta;
 pub mod render;
+pub mod repl;
 pub mod sql;
 pub mod ui;
 pub use cli::Cli;
