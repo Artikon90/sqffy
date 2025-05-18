@@ -8,6 +8,7 @@ pub mod db;
 pub mod error;
 pub mod i18n;
 pub mod meta;
+pub mod picker;
 pub mod render;
 pub mod repl;
 pub mod sql;
