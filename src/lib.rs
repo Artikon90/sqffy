@@ -6,6 +6,7 @@ pub mod config;
 pub mod connections;
 pub mod db;
 pub mod error;
+pub mod generate;
 pub mod i18n;
 pub mod meta;
 pub mod picker;
