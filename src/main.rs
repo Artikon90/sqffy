@@ -1,11 +1,11 @@
 use clap::Parser;
 use sqffy::cli::Cli;
+use sqffy::{app, error::Result};
 
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
-    if cli.list_drivers {
-        println!("(drivers arrive in a later milestone)");
-        return;
+    if let Err(err) = app::run(cli) {
+        app::open_error(err);
     }
-    println!("SQffy scaffold — pass a target once the database layer lands.");
+    Ok(())
 }

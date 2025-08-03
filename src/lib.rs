@@ -1,5 +1,9 @@
-﻿//! SQffy — fast SQL CLI (sqf).
+//! SQffy — fast SQL CLI (`sqf`).
+//!
+//! See [`ARCHITECTURE.md`](../ARCHITECTURE.md), [`docs/DRIVERS.md`](../docs/DRIVERS.md),
+//! and [`docs/I18N.md`](../docs/I18N.md).
 
+pub mod app;
 pub mod cli;
 pub mod complete;
 pub mod config;
@@ -18,6 +22,7 @@ pub mod repl;
 pub mod sql;
 pub mod ui;
 
+pub use app::App;
 pub use cli::Cli;
 pub use config::Config;
 pub use db::{ConnectionSpec, Database, Driver, DriverRegistry};
