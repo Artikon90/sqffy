@@ -13,7 +13,7 @@ name = "sqf"
 path = "src/main.rs"
 
 [features]
-default = ["sqlite"]
+default = ["sqlite", "postgres", "mysql"]
 sqlite = ["dep:rusqlite"]
 postgres = ["dep:postgres"]
 mysql = ["dep:mysql"]
@@ -83,4 +83,3 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
-
