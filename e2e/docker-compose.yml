@@ -1,0 +1,58 @@
+# Linux e2e stack: Postgres + MySQL + Rust test runner.
+#
+#   docker compose -f e2e/docker-compose.yml up --build --abort-on-container-exit
+#
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sqffy
+      POSTGRES_PASSWORD: sqffy
+      POSTGRES_DB: sqffy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sqffy -d sqffy"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: sqffy
+      MYSQL_DATABASE: sqffy
+      MYSQL_USER: sqffy
+      MYSQL_PASSWORD: sqffy
+    command: ["--default-authentication-plugin=caching_sha2_password"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-usqffy", "-psqffy"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  e2e:
+    build:
+      context: ..
+      dockerfile: e2e/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      CARGO_TERM_COLOR: never
+      NO_COLOR: "1"
+      SQFFY_E2E_POSTGRES: postgres://sqffy:sqffy@postgres:5432/sqffy
+      SQFFY_E2E_MYSQL: mysql://sqffy:sqffy@mysql:3306/sqffy
+    volumes:
+      # Mount source for live re-test; image still has a warm cargo cache layer.
+      - ..:/app
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - cargo-target:/app/target
+    working_dir: /app
+    command: ["bash", "e2e/run.sh"]
+
+volumes:
+  cargo-registry:
+  cargo-git:
+  cargo-target:

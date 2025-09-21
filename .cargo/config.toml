@@ -1,0 +1,6 @@
+[alias]
+# End-to-end CLI tests. Not run by default `cargo test`.
+#   cargo e2e              — sqlite / cli / mcp
+#   cargo e2e-all          — + postgres/mysql (needs SQFFY_E2E_* env)
+e2e = "test --features e2e --test e2e_cli --test e2e_sqlite --test e2e_mcp --test e2e_postgres --test e2e_mysql"
+e2e-all = "test --features e2e --test e2e_cli --test e2e_sqlite --test e2e_mcp --test e2e_postgres --test e2e_mysql -- --include-ignored --nocapture"
