@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  NO_COLOR: "1"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test
+
+      - name: Unit tests
+        run: cargo test --lib --bins -- --nocapture
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [dev, release]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: build-${{ matrix.profile }}
+
+      - name: Build (${{ matrix.profile }})
+        run: |
+          if [ "${{ matrix.profile }}" = "release" ]; then
+            cargo build --release --bins
+          else
+            cargo build --bins
+          fi
+
+      - name: Smoke binary
+        run: |
+          if [ "${{ matrix.profile }}" = "release" ]; then
+            BIN=target/release/sqf
+          else
+            BIN=target/debug/sqf
+          fi
+          "$BIN" --version
+          "$BIN" --list-drivers --lang en
+          "$BIN" --no-pager --no-save :memory: -c "SELECT 1 AS ok;"
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sqffy
+          POSTGRES_PASSWORD: sqffy
+          POSTGRES_DB: sqffy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sqffy -d sqffy"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: sqffy
+          MYSQL_DATABASE: sqffy
+          MYSQL_USER: sqffy
+          MYSQL_PASSWORD: sqffy
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -usqffy -psqffy"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 40
+    env:
+      SQFFY_E2E_POSTGRES: postgres://sqffy:sqffy@127.0.0.1:5432/sqffy
+      SQFFY_E2E_MYSQL: mysql://sqffy:sqffy@127.0.0.1:3306/sqffy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: e2e
+
+      - name: E2E (sqlite / cli / mcp + postgres / mysql)
+        run: cargo e2e-all
