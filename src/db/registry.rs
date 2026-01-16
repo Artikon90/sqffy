@@ -45,5 +45,7 @@ pub fn default_registry() -> DriverRegistry {
     registry.register(Arc::new(super::mysql::MysqlDriver));
     #[cfg(feature = "mariadb")]
     registry.register(Arc::new(super::mariadb::MariadbDriver));
+    #[cfg(feature = "clickhouse")]
+    registry.register(Arc::new(super::clickhouse::ClickhouseDriver));
     registry
 }

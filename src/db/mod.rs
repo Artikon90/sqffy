@@ -9,15 +9,14 @@ mod traits;
 
 #[cfg(feature = "sqlite")]
 mod sqlite;
-
 #[cfg(feature = "postgres")]
 mod postgres;
-
 #[cfg(any(feature = "mysql", feature = "mariadb"))]
 mod mysql;
-
 #[cfg(feature = "mariadb")]
 mod mariadb;
+#[cfg(feature = "clickhouse")]
+mod clickhouse;
 
 pub use connect::ConnectionSpec;
 pub use driver::Driver;
@@ -27,6 +26,5 @@ pub use traits::{
     Capabilities, ColumnInfo, ConstraintInfo, Database, IndexInfo, QueryResult, Row, TableInfo,
     TableSchema,
 };
-
 #[cfg(feature = "sqlite")]
 pub use sqlite::{SqliteDb, SqliteDriver};
