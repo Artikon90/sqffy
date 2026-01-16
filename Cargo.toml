@@ -1,8 +1,8 @@
-[package]
+﻿[package]
 name = "sqffy"
 version = "0.1.0"
 edition = "2024"
-description = "SQffy — fast SQL CLI with saved connections (sqf)"
+description = "SQffy вЂ” fast SQL CLI with saved connections (sqf)"
 license = "MIT"
 readme = "README.md"
 keywords = ["sql", "sqlite", "cli", "repl"]
@@ -13,11 +13,12 @@ name = "sqf"
 path = "src/main.rs"
 
 [features]
-default = ["sqlite", "postgres", "mysql"]
+default = ["sqlite", "postgres", "mysql", "mariadb"]
 sqlite = ["dep:rusqlite"]
 postgres = ["dep:postgres"]
 mysql = ["dep:mysql"]
-## Enable with `cargo e2e` — not part of default `cargo test`.
+mariadb = ["dep:mysql"]
+## Enable with `cargo e2e` вЂ” not part of default `cargo test`.
 e2e = []
 
 [dependencies]
@@ -83,3 +84,4 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+

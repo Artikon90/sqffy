@@ -42,7 +42,10 @@ A new database is one module + a registry line.
 | --- | --- | --- |
 | SQLite | `rusqlite` (bundled) | `sqlite` (default) |
 | PostgreSQL | `postgres` (sync) | `postgres` (default) |
-| MySQL / MariaDB | `mysql` (sync) | `mysql` (default) |
+| MySQL | `mysql` (sync) | `mysql` (default) |
+| MariaDB | `mysql` (sync wire) | `mariadb` (default) |
+| ClickHouse | HTTP via `ureq` | `clickhouse` (default) |
+| Oracle | `oracle` (ODPI-C) | `oracle` (default; needs Instant Client) |
 
 ## Pattern for a new backend
 

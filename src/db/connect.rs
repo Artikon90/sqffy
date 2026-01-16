@@ -88,6 +88,30 @@ fn parse_url(raw: &str) -> Result<Option<ConnectionSpec>> {
         }));
     }
 
+    if strip_scheme(&lower, &["mariadb://", "maria://"]).is_some() {
+        return Ok(Some(ConnectionSpec {
+            driver: "mariadb".into(),
+            target: raw.to_string(),
+            url: Some(raw.to_string()),
+        }));
+    }
+
+    if strip_scheme(&lower, &["clickhouse://", "ch://"]).is_some() {
+        return Ok(Some(ConnectionSpec {
+            driver: "clickhouse".into(),
+            target: raw.to_string(),
+            url: Some(raw.to_string()),
+        }));
+    }
+
+    if strip_scheme(&lower, &["oracle://", "oracledb://", "ora://"]).is_some() {
+        return Ok(Some(ConnectionSpec {
+            driver: "oracle".into(),
+            target: raw.to_string(),
+            url: Some(raw.to_string()),
+        }));
+    }
+
     // Unknown scheme → leave to plain-path handling.
     if raw.contains("://") {
         let scheme = raw.split("://").next().unwrap_or("");
@@ -147,6 +171,28 @@ mod tests {
         let spec =
             ConnectionSpec::parse(Some("postgres://u:p@localhost:5432/app"), None).unwrap();
         assert_eq!(spec.driver, "postgres");
+    }
+
+    #[test]
+    fn clickhouse_and_oracle_urls() {
+        assert_eq!(
+            ConnectionSpec::parse(Some("clickhouse://u:p@localhost:8123/db"), None)
+                .unwrap()
+                .driver,
+            "clickhouse"
+        );
+        assert_eq!(
+            ConnectionSpec::parse(Some("oracle://u:p@localhost:1521/XEPDB1"), None)
+                .unwrap()
+                .driver,
+            "oracle"
+        );
+        assert_eq!(
+            ConnectionSpec::parse(Some("mariadb://u:p@localhost:3306/db"), None)
+                .unwrap()
+                .driver,
+            "mariadb"
+        );
     }
 
     #[test]

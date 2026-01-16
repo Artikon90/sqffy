@@ -1,15 +1,4 @@
-//! Pluggable database backends.
-//!
-//! ```text
-//! ConnectionSpec ──▶ DriverRegistry ──▶ Box<dyn Database>
-//!                         ▲
-//!            SqliteDriver ┤
-//!          PostgresDriver ┤  (feature-gated stubs / impls)
-//!             MysqlDriver ┘
-//! ```
-//!
-//! App / meta / render / complete only depend on [`Database`].
-//! To add a backend, see `docs/DRIVERS.md`.
+﻿//! Pluggable database backends.
 
 mod connect;
 mod driver;
@@ -24,8 +13,11 @@ mod sqlite;
 #[cfg(feature = "postgres")]
 mod postgres;
 
-#[cfg(feature = "mysql")]
+#[cfg(any(feature = "mysql", feature = "mariadb"))]
 mod mysql;
+
+#[cfg(feature = "mariadb")]
+mod mariadb;
 
 pub use connect::ConnectionSpec;
 pub use driver::Driver;

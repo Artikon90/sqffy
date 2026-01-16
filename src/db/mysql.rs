@@ -1,4 +1,4 @@
-//! MySQL / MariaDB driver (sync `mysql` crate).
+//! MySQL driver (sync `mysql` crate). MariaDB has its own driver module.
 
 use super::connect::ConnectionSpec;
 use super::driver::Driver;
@@ -20,28 +20,12 @@ impl Driver for MysqlDriver {
         "mysql"
     }
 
-    fn aliases(&self) -> &'static [&'static str] {
-        &["mariadb"]
-    }
-
     fn description(&self) -> &'static str {
-        "MySQL / MariaDB"
+        "MySQL"
     }
 
     fn open(&self, spec: &ConnectionSpec) -> Result<Box<dyn Database>> {
-        let url = spec.url.clone().unwrap_or_else(|| spec.target.clone());
-        let opts = Opts::from_url(&url).map_err(my_err)?;
-        let pool = Pool::new(opts).map_err(my_err)?;
-        let mut conn = pool.get_conn().map_err(my_err)?;
-        let schema: String = conn
-            .query_first("SELECT DATABASE()")
-            .map_err(my_err)?
-            .unwrap_or_default();
-        Ok(Box::new(MysqlDb {
-            conn: RefCell::new(conn),
-            label: redact_url(&url),
-            schema,
-        }))
+        open_mysql_url(spec, "mysql")
     }
 
     fn provision(&self) -> ProvisionInfo {
@@ -71,15 +55,48 @@ impl Driver for MysqlDriver {
     }
 }
 
+/// Open a MySQL-protocol URL (also used by the MariaDB driver).
+pub(crate) fn open_mysql_url(
+    spec: &ConnectionSpec,
+    driver_id: &'static str,
+) -> Result<Box<dyn Database>> {
+    let raw = spec.url.clone().unwrap_or_else(|| spec.target.clone());
+    // `mysql` crate expects `mysql://…`; rewrite sibling schemes.
+    let url = if let Some(rest) = raw
+        .strip_prefix("mariadb://")
+        .or_else(|| raw.strip_prefix("MARIADB://"))
+    {
+        format!("mysql://{rest}")
+    } else {
+        raw
+    };
+    let opts = Opts::from_url(&url).map_err(|e| Error::backend(driver_id, e.to_string()))?;
+    let pool = Pool::new(opts).map_err(|e| Error::backend(driver_id, e.to_string()))?;
+    let mut conn = pool
+        .get_conn()
+        .map_err(|e| Error::backend(driver_id, e.to_string()))?;
+    let schema: String = conn
+        .query_first("SELECT DATABASE()")
+        .map_err(|e| Error::backend(driver_id, e.to_string()))?
+        .unwrap_or_default();
+    Ok(Box::new(MysqlDb {
+        conn: RefCell::new(conn),
+        label: redact_url(&url),
+        schema,
+        driver_id,
+    }))
+}
+
 pub struct MysqlDb {
     conn: RefCell<mysql::PooledConn>,
     label: String,
     schema: String,
+    driver_id: &'static str,
 }
 
 impl Database for MysqlDb {
     fn driver_id(&self) -> &'static str {
-        "mysql"
+        self.driver_id
     }
 
     fn display_label(&self) -> &str {
