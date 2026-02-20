@@ -13,12 +13,13 @@ name = "sqf"
 path = "src/main.rs"
 
 [features]
-default = ["sqlite", "postgres", "mysql", "mariadb", "clickhouse"]
+default = ["sqlite", "postgres", "mysql", "mariadb", "clickhouse", "oracle"]
 sqlite = ["dep:rusqlite"]
 postgres = ["dep:postgres"]
 mysql = ["dep:mysql"]
 mariadb = ["dep:mysql"]
 clickhouse = ["dep:ureq"]
+oracle = ["dep:oracle"]
 ## Enable with `cargo e2e` вЂ” not part of default `cargo test`.
 e2e = []
 
@@ -32,6 +33,7 @@ rusqlite = { version = "0.32", features = ["bundled", "column_decltype"], option
 postgres = { version = "0.19", optional = true }
 mysql = { version = "25", optional = true, default-features = true }
 ureq = { version = "2", optional = true, default-features = true }
+oracle = { version = "0.6", optional = true }
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
