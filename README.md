@@ -10,8 +10,11 @@
 [![SQLite](https://img.shields.io/badge/SQLite-bundled-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](#-databases)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-ready-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](#-databases)
 [![MySQL](https://img.shields.io/badge/MySQL-ready-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](#-databases)
+[![MariaDB](https://img.shields.io/badge/MariaDB-ready-C32136?style=for-the-badge&logo=mariadb&logoColor=white)](#-databases)
+[![ClickHouse](https://img.shields.io/badge/ClickHouse-ready-FFCC01?style=for-the-badge&logo=clickhouse&logoColor=black)](#-databases)
+[![Oracle](https://img.shields.io/badge/Oracle-ready-F80000?style=for-the-badge&logo=oracle&logoColor=white)](#-databases)
 
-**English** · [Русский](./README.ru.md)
+**English** · [Русский](./README.ru.md) · [中文](./README.zh.md)
 
 <br/>
 
@@ -43,14 +46,14 @@ smart completion, synthetic data, and a read-only MCP server — all in one bina
 
 | | Capability | What you get |
 | :--- | :--- | :--- |
-| 🗄️ | **Multi-database** | SQLite · PostgreSQL · MySQL / MariaDB |
+| 🗄️ | **Multi-database** | SQLite · PostgreSQL · MySQL · MariaDB · ClickHouse · Oracle |
 | 🧭 | **Connection picker** | Saved catalog, add existing, create new |
 | 🐳 | **Local provision** | Docker pull/run or winget download with a progress bar |
 | 🎨 | **Readable output** | Typed columns, framed SQL errors, compact brand header |
 | ⌨️ | **Smart autocomplete** | Clause-aware suggestions (tables, columns, meta) |
 | 🧪 | **`.generate`** | Synthetic rows with preview + batched inserts + FK pools |
 | 🔌 | **MCP** | Read-only tools over stdio or HTTP (`/mcp`) |
-| 🌍 | **i18n** | English & Russian UI (`--lang` / `SQFFY_LANG`) |
+| 🌍 | **i18n** | English · Russian · Chinese (`--lang` / `SQFFY_LANG`) |
 | ⚡ | **One-shot mode** | `-c` scripts for CI, scripting, and e2e |
 
 ---
@@ -75,6 +78,9 @@ cargo run --release --bin sqf
 | `sqlite` | ✅ | Bundled `rusqlite` |
 | `postgres` | ✅ | Sync `postgres` crate |
 | `mysql` | ✅ | Sync `mysql` crate |
+| `mariadb` | ✅ | MySQL wire + MariaDB provision |
+| `clickhouse` | ✅ | HTTP via `ureq` |
+| `oracle` | ✅ | `oracle` crate (Instant Client) |
 | `e2e` | ❌ | Only for `cargo e2e` |
 
 ```bash
@@ -91,9 +97,13 @@ cargo build --release --no-default-features --features sqlite
 ```bash
 sqf                          # interactive picker
 sqf --lang ru                # Russian UI
+sqf --lang zh                # Chinese UI
 sqf ./path/to/db.sqlite      # open SQLite file
 sqf postgres://u:p@localhost:5432/app
 sqf mysql://u:p@localhost:3306/app
+sqf mariadb://u:p@localhost:3306/app
+sqf clickhouse://u:p@localhost:8123/default
+sqf oracle://u:p@localhost:1521/XEPDB1
 sqf --list-drivers
 sqf --no-pager --no-save :memory: -c "SELECT 1 AS ok;"
 ```
@@ -136,7 +146,7 @@ Connections live in the OS config dir as `connections.toml`
 | `--no-pager` | Disable pager |
 | `--no-save` | Don’t touch the connection catalog |
 | `--mcp-port PORT` | MCP HTTP beside the REPL |
-| `--lang en\|ru` | UI language |
+| `--lang en\|ru\|zh` | UI language |
 
 ---
 
@@ -153,6 +163,15 @@ sqf postgres://sqffy:sqffy@127.0.0.1:5432/sqffy
 
 # MySQL
 sqf mysql://sqffy:sqffy@127.0.0.1:3306/sqffy
+
+# MariaDB
+sqf mariadb://sqffy:sqffy@127.0.0.1:3306/sqffy
+
+# ClickHouse (HTTP)
+sqf clickhouse://sqffy:sqffy@127.0.0.1:8123/sqffy
+
+# Oracle (needs Instant Client)
+sqf oracle://sqffy:sqffy@127.0.0.1:1521/XEPDB1
 ```
 
 When creating a **server** DB and nothing is listening locally, SQffy can:
@@ -196,7 +215,8 @@ sqf mcp --port 8787
 
 ```bash
 sqf --lang ru
-SQFFY_LANG=ru sqf
+sqf --lang zh
+SQFFY_LANG=zh sqf
 ```
 
 Resolution order: `--lang` → `SQFFY_LANG` → system locale → `en`.
@@ -209,14 +229,17 @@ Full guide: [docs/I18N.md](./docs/I18N.md).
 
 ```bash
 cargo test          # unit tests only
-cargo e2e           # CLI e2e (SQLite / MCP / meta)
-cargo e2e-all       # + Postgres & MySQL (needs env)
+cargo e2e           # CLI e2e (SQLite / MCP / schemes)
+cargo e2e-all       # + server adapters (needs SQFFY_E2E_* env)
 ```
 
 | Variable | Example |
 | :--- | :--- |
 | `SQFFY_E2E_POSTGRES` | `postgres://sqffy:sqffy@127.0.0.1:5432/sqffy` |
 | `SQFFY_E2E_MYSQL` | `mysql://sqffy:sqffy@127.0.0.1:3306/sqffy` |
+| `SQFFY_E2E_MARIADB` | `mariadb://sqffy:sqffy@127.0.0.1:3307/sqffy` |
+| `SQFFY_E2E_CLICKHOUSE` | `clickhouse://sqffy:sqffy@127.0.0.1:8123/sqffy` |
+| `SQFFY_E2E_ORACLE` | `oracle://sqffy:sqffy@127.0.0.1:1521/XEPDB1` |
 
 Docker stack (Linux):
 
@@ -243,7 +266,7 @@ CI jobs (independent): **Test** · **Build** · **E2E** — see [`.github/workfl
 ```text
 sqffy/
 ├── src/           # CLI, drivers, REPL, MCP, generate, provision
-├── locales/       # en.toml · ru.toml
+├── locales/       # en.toml · ru.toml · zh.toml
 ├── tests/         # e2e_* (feature = e2e)
 ├── e2e/           # Docker Compose + Linux runner
 └── .github/       # CI: test · build · e2e

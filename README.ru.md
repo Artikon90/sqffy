@@ -10,8 +10,11 @@
 [![SQLite](https://img.shields.io/badge/SQLite-bundled-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](#-базы-данных)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-ready-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](#-базы-данных)
 [![MySQL](https://img.shields.io/badge/MySQL-ready-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](#-базы-данных)
+[![MariaDB](https://img.shields.io/badge/MariaDB-ready-C32136?style=for-the-badge&logo=mariadb&logoColor=white)](#-базы-данных)
+[![ClickHouse](https://img.shields.io/badge/ClickHouse-ready-FFCC01?style=for-the-badge&logo=clickhouse&logoColor=black)](#-базы-данных)
+[![Oracle](https://img.shields.io/badge/Oracle-ready-F80000?style=for-the-badge&logo=oracle&logoColor=white)](#-базы-данных)
 
-[English](./README.md) · **Русский**
+[English](./README.md) · **Русский** · [中文](./README.zh.md)
 
 <br/>
 
@@ -43,14 +46,14 @@
 
 | | Возможность | Что даёт |
 | :--- | :--- | :--- |
-| 🗄️ | **Несколько БД** | SQLite · PostgreSQL · MySQL / MariaDB |
+| 🗄️ | **Несколько БД** | SQLite · PostgreSQL · MySQL · MariaDB · ClickHouse · Oracle |
 | 🧭 | **Пикер подключений** | Каталог, добавить существующую, создать новую |
 | 🐳 | **Локальный provision** | Docker pull/run или скачивание (winget) с прогресс-баром |
 | 🎨 | **Читаемый вывод** | Типы под колонками, ошибки в рамке, компактный бренд |
 | ⌨️ | **Умный автокомплит** | Подсказки по клаузам (таблицы, колонки, meta) |
 | 🧪 | **`.generate`** | Синтетические строки: превью + батчи + FK |
 | 🔌 | **MCP** | Read-only инструменты по stdio или HTTP (`/mcp`) |
-| 🌍 | **i18n** | Интерфейс EN / RU (`--lang` / `SQFFY_LANG`) |
+| 🌍 | **i18n** | EN · RU · ZH (`--lang` / `SQFFY_LANG`) |
 | ⚡ | **One-shot** | Скрипты `-c` для CI, автоматизации и e2e |
 
 ---
@@ -75,6 +78,9 @@ cargo run --release --bin sqf
 | `sqlite` | ✅ | Bundled `rusqlite` |
 | `postgres` | ✅ | Sync-крейт `postgres` |
 | `mysql` | ✅ | Sync-крейт `mysql` |
+| `mariadb` | ✅ | MySQL wire + MariaDB provision |
+| `clickhouse` | ✅ | HTTP через `ureq` |
+| `oracle` | ✅ | крейт `oracle` (Instant Client) |
 | `e2e` | ❌ | Только для `cargo e2e` |
 
 ```bash
@@ -94,6 +100,10 @@ sqf --lang ru                # русский UI
 sqf ./path/to/db.sqlite      # открыть файл SQLite
 sqf postgres://u:p@localhost:5432/app
 sqf mysql://u:p@localhost:3306/app
+sqf mariadb://u:p@localhost:3306/app
+sqf clickhouse://u:p@localhost:8123/default
+sqf oracle://u:p@localhost:1521/XEPDB1
+sqf --lang zh
 sqf --list-drivers
 sqf --no-pager --no-save :memory: -c "SELECT 1 AS ok;"
 ```
@@ -153,6 +163,15 @@ sqf postgres://sqffy:sqffy@127.0.0.1:5432/sqffy
 
 # MySQL
 sqf mysql://sqffy:sqffy@127.0.0.1:3306/sqffy
+
+# MariaDB
+sqf mariadb://sqffy:sqffy@127.0.0.1:3306/sqffy
+
+# ClickHouse (HTTP)
+sqf clickhouse://sqffy:sqffy@127.0.0.1:8123/sqffy
+
+# Oracle (нужен Instant Client)
+sqf oracle://sqffy:sqffy@127.0.0.1:1521/XEPDB1
 ```
 
 При создании **серверной** БД, если локально ничего не слушает, SQffy предложит:
@@ -210,13 +229,16 @@ SQFFY_LANG=ru sqf
 ```bash
 cargo test          # только юнит-тесты
 cargo e2e           # e2e CLI (SQLite / MCP / meta)
-cargo e2e-all       # + Postgres и MySQL (нужен env)
+cargo e2e-all       # + серверные адаптеры (нужен SQFFY_E2E_*)
 ```
 
 | Переменная | Пример |
 | :--- | :--- |
 | `SQFFY_E2E_POSTGRES` | `postgres://sqffy:sqffy@127.0.0.1:5432/sqffy` |
 | `SQFFY_E2E_MYSQL` | `mysql://sqffy:sqffy@127.0.0.1:3306/sqffy` |
+| `SQFFY_E2E_MARIADB` | `mariadb://sqffy:sqffy@127.0.0.1:3307/sqffy` |
+| `SQFFY_E2E_CLICKHOUSE` | `clickhouse://sqffy:sqffy@127.0.0.1:8123/sqffy` |
+| `SQFFY_E2E_ORACLE` | `oracle://sqffy:sqffy@127.0.0.1:1521/XEPDB1` |
 
 Docker-стек (Linux):
 

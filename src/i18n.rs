@@ -55,6 +55,7 @@ fn flatten_toml(value: &toml::Value, prefix: &str, out: &mut HashMap<String, Str
 fn load_embedded(lang: &str) -> HashMap<String, String> {
     let raw = match lang {
         "ru" => include_str!("../locales/ru.toml"),
+        "zh" => include_str!("../locales/zh.toml"),
         _ => include_str!("../locales/en.toml"),
     };
     let value = match raw.parse::<toml::Value>() {
@@ -74,6 +75,7 @@ fn normalize_lang(raw: &str) -> String {
         .to_ascii_lowercase();
     match primary.as_str() {
         "ru" => "ru".into(),
+        "zh" | "zhcn" | "zhtw" | "cn" => "zh".into(),
         _ => "en".into(),
     }
 }
@@ -151,21 +153,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn normalize_russian() {
+    fn normalize_langs() {
         assert_eq!(normalize_lang("ru_RU.UTF-8"), "ru");
         assert_eq!(normalize_lang("en-US"), "en");
+        assert_eq!(normalize_lang("zh_CN.UTF-8"), "zh");
+        assert_eq!(normalize_lang("zh-Hans"), "zh");
     }
 
     #[test]
-    fn english_keys_exist() {
+    fn locale_catalogs_resolve() {
+        // Sequential: catalog is process-global.
         init(Some("en"));
         assert_eq!(t("app.name"), "SQffy");
-        assert!(t("picker.title").contains("Select"));
-    }
+        assert!(t("picker.title").contains("Select"), "{}", t("picker.title"));
 
-    #[test]
-    fn russian_keys_exist() {
         init(Some("ru"));
-        assert!(t("picker.title").contains("Выберите"));
+        assert!(t("picker.title").contains("Выберите"), "{}", t("picker.title"));
+
+        init(Some("zh"));
+        assert!(t("picker.title").contains("选择"), "{}", t("picker.title"));
     }
 }
