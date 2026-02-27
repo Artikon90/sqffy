@@ -75,6 +75,21 @@ name = "e2e_mysql"
 path = "tests/e2e_mysql.rs"
 required-features = ["e2e"]
 
+[[test]]
+name = "e2e_mariadb"
+path = "tests/e2e_mariadb.rs"
+required-features = ["e2e"]
+
+[[test]]
+name = "e2e_clickhouse"
+path = "tests/e2e_clickhouse.rs"
+required-features = ["e2e"]
+
+[[test]]
+name = "e2e_oracle"
+path = "tests/e2e_oracle.rs"
+required-features = ["e2e"]
+
 [[bench]]
 name = "render_table"
 harness = false
@@ -88,4 +103,5 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
 

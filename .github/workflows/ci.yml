@@ -96,9 +96,39 @@ jobs:
           --health-interval 3s
           --health-timeout 5s
           --health-retries 40
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: sqffy
+          MARIADB_DATABASE: sqffy
+          MARIADB_USER: sqffy
+          MARIADB_PASSWORD: sqffy
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 40
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_USER: sqffy
+          CLICKHOUSE_PASSWORD: sqffy
+          CLICKHOUSE_DB: sqffy
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "wget -qO- http://127.0.0.1:8123/ping | grep -q Ok"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 40
     env:
       SQFFY_E2E_POSTGRES: postgres://sqffy:sqffy@127.0.0.1:5432/sqffy
       SQFFY_E2E_MYSQL: mysql://sqffy:sqffy@127.0.0.1:3306/sqffy
+      SQFFY_E2E_MARIADB: mariadb://sqffy:sqffy@127.0.0.1:3307/sqffy
+      SQFFY_E2E_CLICKHOUSE: clickhouse://sqffy:sqffy@127.0.0.1:8123/sqffy
     steps:
       - uses: actions/checkout@v4
 
@@ -110,5 +140,5 @@ jobs:
         with:
           shared-key: e2e
 
-      - name: E2E (sqlite / cli / mcp + postgres / mysql)
+      - name: E2E (sqlite/cli/mcp + postgres/mysql/mariadb/clickhouse)
         run: cargo e2e-all
