@@ -35,7 +35,7 @@ Windows · Linux · macOS
 
 SQffy 是一个简单的命令行工具，用来在终端里操作 SQL 数据库。连上，写下查询，读到结果。
 
-SQLite、PostgreSQL、MySQL、MariaDB、ClickHouse 和 Oracle 已经内置。其他任何数据库都可以写成适配器接进来：同一个 shell，同一套命令。步骤见 [docs/DRIVERS.md](./docs/DRIVERS.md)。
+SQLite、PostgreSQL、MySQL、MariaDB、ClickHouse 和 Oracle 已经内置。其他任何数据库都可以写成适配器接进来：同一个 shell，同一套命令。步骤见 [docs/DRIVERS.zh.md](./docs/DRIVERS.zh.md)。
 
 ---
 
@@ -53,7 +53,7 @@ SQffy 用 Rust 写成，shell 保持轻快。语法高亮在你输入时就把�
 
 ## 看得清的表
 
-库的 schema 和查询结果是渲染出来的，不是一堆原始文本。类型写在列名下面——引擎报告的那个类型。`.schema` 把列、键、索引和 DDL 放在同一屏。
+库的 schema 和查询结果是渲染出来的，不是一堆原始文本。类型写在列名下面——引擎报告的那个类型。`.schema` 把列、键和索引放在同一屏；引擎能返回时，DDL 也在。
 
 <p align="center">
   <img src="./docs/media/results.png" width="426" alt="SELECT 结果：列名下方印着 INTEGER 和 TEXT">
@@ -142,7 +142,7 @@ sqf --lang zh                   # en · ru · zh
 SQFFY_LANG=zh sqf
 ```
 
-语言解析顺序：`--lang`，然后 `SQFFY_LANG`，然后系统区域，最后是英语。界面字符串见 [docs/I18N.md](./docs/I18N.md)。
+语言解析顺序：`--lang`，然后 `SQFFY_LANG`，然后 `LC_ALL`、`LC_MESSAGES`、`LANG`，最后是英语。界面字符串见 [docs/I18N.zh.md](./docs/I18N.zh.md)。
 
 <details>
 <summary><b>Feature 开关</b></summary>
@@ -171,12 +171,12 @@ cargo build --release --no-default-features --features sqlite
 
 | 命令 | |
 | :--- | :--- |
-| `.help` &nbsp; `.h` | 命令列表 |
+| `.help` &nbsp; `.h` &nbsp; `?` | 命令列表 |
 | `.tables` &nbsp; `.t` | 表与视图 |
-| `.schema` `[table]` | 名称索引，或一张表的完整信息 |
-| `.describe` `<table>` | 列 |
-| `.generate` `<table> <n> [--yes] [--dry-run] [col=ref.col …]` | 生成用于测试和可视化的数据 |
-| `.quit` &nbsp; `.q` | 退出 |
+| `.schema` &nbsp; `.s` &nbsp; `[table]` | 名称索引，或一张表的完整信息 |
+| `.describe` &nbsp; `.d` &nbsp; `<table>` | 列 |
+| `.generate` &nbsp; `.gen` &nbsp; `<table> <n> [--yes] [--dry-run] [col=ref.col …]` | 生成用于测试和可视化的数据。`--yes` 也可以写成 `-y`。 |
+| `.quit` &nbsp; `.q` &nbsp; `.exit` | 退出 |
 
 ### 参数
 
@@ -200,7 +200,7 @@ cargo build --release --no-default-features --features sqlite
 | MySQL | `mysql://USER:PASSWORD@localhost:3306/app` | 可从选择器走 Docker 或安装程序 |
 | MariaDB | `mariadb://USER:PASSWORD@localhost:3306/app` | 可从选择器走 Docker 或安装程序 |
 | ClickHouse | `clickhouse://USER:PASSWORD@localhost:8123/default` | HTTP。可从选择器走 Docker 或安装程序 |
-| Oracle | `oracle://USER:PASSWORD@localhost:1521/XEPDB1` | 需要 Instant Client |
+| Oracle | `oracle://USER:PASSWORD@localhost:1521/XEPDB1` | 需要 Instant Client。`.schema` 没有 `CREATE` 脚本。 |
 
 ### MCP 工具
 
@@ -219,9 +219,9 @@ cargo build --release --no-default-features --features sqlite
 
 | | |
 | :--- | :--- |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | 这个 crate 如何分层 |
-| [docs/DRIVERS.md](./docs/DRIVERS.md) | 添加数据库适配器 |
-| [docs/I18N.md](./docs/I18N.md) | 添加一种语言 |
+| [ARCHITECTURE.zh.md](./ARCHITECTURE.zh.md) | 这个 crate 如何分层 |
+| [docs/DRIVERS.zh.md](./docs/DRIVERS.zh.md) | 添加数据库适配器 |
+| [docs/I18N.zh.md](./docs/I18N.zh.md) | 添加一种语言 |
 
 <details>
 <summary><b>开发</b></summary>

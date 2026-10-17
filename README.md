@@ -53,7 +53,7 @@ After `FROM`, the list is tables. After the table name, it is columns.
 
 ## Tables that are easy to read
 
-Schema and query results are rendered, not dumped as raw text. The type sits under the column name — the type the engine reported. `.schema` puts columns, keys, indexes, and the DDL on one screen.
+Schema and query results are rendered, not dumped as raw text. The type sits under the column name — the type the engine reported. `.schema` puts columns, keys, and indexes on one screen, plus the DDL when the engine returns it.
 
 <p align="center">
   <img src="./docs/media/results.png" width="426" alt="SELECT result with INTEGER and TEXT printed under the column names">
@@ -142,7 +142,7 @@ sqf --lang ru                   # en · ru · zh
 SQFFY_LANG=zh sqf
 ```
 
-Language resolution: `--lang`, then `SQFFY_LANG`, then the system locale, then English. Strings live in [docs/I18N.md](./docs/I18N.md).
+Language resolution: `--lang`, then `SQFFY_LANG`, then `LC_ALL`, `LC_MESSAGES`, `LANG`, then English. Strings live in [docs/I18N.md](./docs/I18N.md).
 
 <details>
 <summary><b>Feature flags</b></summary>
@@ -171,12 +171,12 @@ cargo build --release --no-default-features --features sqlite
 
 | Command | |
 | :--- | :--- |
-| `.help` &nbsp; `.h` | Command list |
+| `.help` &nbsp; `.h` &nbsp; `?` | Command list |
 | `.tables` &nbsp; `.t` | Tables and views |
-| `.schema` `[table]` | Index of names, or one table in full |
-| `.describe` `<table>` | Columns |
-| `.generate` `<table> <n> [--yes] [--dry-run] [col=ref.col …]` | Data generation for testing and visualization |
-| `.quit` &nbsp; `.q` | Leave |
+| `.schema` &nbsp; `.s` &nbsp; `[table]` | Index of names, or one table in full |
+| `.describe` &nbsp; `.d` &nbsp; `<table>` | Columns |
+| `.generate` &nbsp; `.gen` &nbsp; `<table> <n> [--yes] [--dry-run] [col=ref.col …]` | Data generation for testing and visualization. `--yes` is also `-y`. |
+| `.quit` &nbsp; `.q` &nbsp; `.exit` | Leave |
 
 ### Flags
 
@@ -200,7 +200,7 @@ cargo build --release --no-default-features --features sqlite
 | MySQL | `mysql://USER:PASSWORD@localhost:3306/app` | Docker or installer from the picker |
 | MariaDB | `mariadb://USER:PASSWORD@localhost:3306/app` | Docker or installer from the picker |
 | ClickHouse | `clickhouse://USER:PASSWORD@localhost:8123/default` | HTTP. Docker or installer from the picker |
-| Oracle | `oracle://USER:PASSWORD@localhost:1521/XEPDB1` | Needs Instant Client |
+| Oracle | `oracle://USER:PASSWORD@localhost:1521/XEPDB1` | Needs Instant Client. `.schema` has no `CREATE` script. |
 
 ### MCP tools
 
