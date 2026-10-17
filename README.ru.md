@@ -35,7 +35,7 @@ Windows · Linux · macOS
 
 SQffy — простая CLI-утилита для работы с SQL-базами через терминал. Подключились, написали запрос, прочитали ответ.
 
-SQLite, PostgreSQL, MySQL, MariaDB, ClickHouse и Oracle уже внутри. Для любой другой базы можно дописать адаптер: тот же шелл, те же команды. Чеклист — в [docs/DRIVERS.md](./docs/DRIVERS.md).
+SQLite, PostgreSQL, MySQL, MariaDB, ClickHouse и Oracle уже внутри. Для любой другой базы можно дописать адаптер: тот же шелл, те же команды. Чеклист — в [docs/DRIVERS.ru.md](./docs/DRIVERS.ru.md).
 
 ---
 
@@ -53,7 +53,7 @@ SQLite, PostgreSQL, MySQL, MariaDB, ClickHouse и Oracle уже внутри. Д
 
 ## Удобные таблицы
 
-Схему базы и результат запроса SQffy рисует, а не вываливает сырым текстом. Под именем колонки стоит её тип — тот, который сообщил движок. `.schema` собирает колонки, ключи, индексы и DDL на один экран.
+Схему базы и результат запроса SQffy рисует, а не вываливает сырым текстом. Под именем колонки стоит её тип — тот, который сообщил движок. `.schema` собирает колонки, ключи и индексы на один экран, а DDL — когда движок его отдаёт.
 
 <p align="center">
   <img src="./docs/media/results.png" width="426" alt="Результат SELECT: под именами колонок напечатаны INTEGER и TEXT">
@@ -142,7 +142,7 @@ sqf --lang ru                   # en · ru · zh
 SQFFY_LANG=zh sqf
 ```
 
-Порядок языка: `--lang`, затем `SQFFY_LANG`, затем локаль системы, затем английский. Строки интерфейса — в [docs/I18N.md](./docs/I18N.md).
+Порядок языка: `--lang`, затем `SQFFY_LANG`, затем `LC_ALL`, `LC_MESSAGES`, `LANG`, затем английский. Строки интерфейса — в [docs/I18N.ru.md](./docs/I18N.ru.md).
 
 <details>
 <summary><b>Feature-флаги</b></summary>
@@ -171,12 +171,12 @@ cargo build --release --no-default-features --features sqlite
 
 | Команда | |
 | :--- | :--- |
-| `.help` &nbsp; `.h` | Список команд |
+| `.help` &nbsp; `.h` &nbsp; `?` | Список команд |
 | `.tables` &nbsp; `.t` | Таблицы и представления |
-| `.schema` `[table]` | Индекс имён или одна таблица целиком |
-| `.describe` `<table>` | Колонки |
-| `.generate` `<table> <n> [--yes] [--dry-run] [col=ref.col …]` | Генерация данных для тестирования и визуализации |
-| `.quit` &nbsp; `.q` | Выход |
+| `.schema` &nbsp; `.s` &nbsp; `[table]` | Индекс имён или одна таблица целиком |
+| `.describe` &nbsp; `.d` &nbsp; `<table>` | Колонки |
+| `.generate` &nbsp; `.gen` &nbsp; `<table> <n> [--yes] [--dry-run] [col=ref.col …]` | Генерация данных для тестирования и визуализации. `--yes` — это ещё и `-y`. |
+| `.quit` &nbsp; `.q` &nbsp; `.exit` | Выход |
 
 ### Флаги
 
@@ -200,7 +200,7 @@ cargo build --release --no-default-features --features sqlite
 | MySQL | `mysql://USER:PASSWORD@localhost:3306/app` | Docker или установщик из пикера |
 | MariaDB | `mariadb://USER:PASSWORD@localhost:3306/app` | Docker или установщик из пикера |
 | ClickHouse | `clickhouse://USER:PASSWORD@localhost:8123/default` | HTTP. Docker или установщик из пикера |
-| Oracle | `oracle://USER:PASSWORD@localhost:1521/XEPDB1` | Нужен Instant Client |
+| Oracle | `oracle://USER:PASSWORD@localhost:1521/XEPDB1` | Нужен Instant Client. В `.schema` нет скрипта `CREATE`. |
 
 ### Инструменты MCP
 
@@ -219,9 +219,9 @@ cargo build --release --no-default-features --features sqlite
 
 | | |
 | :--- | :--- |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Как устроен крейт |
-| [docs/DRIVERS.md](./docs/DRIVERS.md) | Свой адаптер базы |
-| [docs/I18N.md](./docs/I18N.md) | Новый язык |
+| [ARCHITECTURE.ru.md](./ARCHITECTURE.ru.md) | Как устроен крейт |
+| [docs/DRIVERS.ru.md](./docs/DRIVERS.ru.md) | Свой адаптер базы |
+| [docs/I18N.ru.md](./docs/I18N.ru.md) | Новый язык |
 
 <details>
 <summary><b>Разработка</b></summary>

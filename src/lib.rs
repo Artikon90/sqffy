@@ -1,7 +1,7 @@
 //! SQffy — fast SQL CLI (`sqf`).
 //!
-//! See [`ARCHITECTURE.md`](../ARCHITECTURE.md), [`docs/DRIVERS.md`](../docs/DRIVERS.md),
-//! and [`docs/I18N.md`](../docs/I18N.md).
+//! See [`ARCHITECTURE.md`](../ARCHITECTURE.md) (also `.ru.md` / `.zh.md`),
+//! [`docs/DRIVERS.md`](../docs/DRIVERS.md), and [`docs/I18N.md`](../docs/I18N.md).
 
 pub mod app;
 pub mod cli;
