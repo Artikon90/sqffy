@@ -38,6 +38,20 @@ pub enum Clause {
     ObjectType,
     /// After `CREATE TABLE` / `DROP TABLE` — expecting object name.
     TableName,
+    /// Inside `CREATE TABLE (` — column name, or a table-level constraint.
+    ColName,
+    /// After a column name — expecting a type (`INTEGER`, `TEXT`, …).
+    ColType,
+    /// Multi-word type still open (`DOUBLE`, `TIMESTAMP WITH`, …).
+    ColTypeTail,
+    /// After the type — `PRIMARY KEY`, `NOT NULL`, …
+    ColTail,
+    /// After `PRIMARY` / `FOREIGN`.
+    ColKey,
+    /// After `NOT`.
+    ColNot,
+    /// After `REFERENCES` — expecting a table.
+    ColRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,10 +91,57 @@ pub fn analyze(line: &str) -> CompletionContext {
     let mut clause = Clause::Start;
     let mut scope: Vec<TableRef> = Vec::new();
     let mut expect = Expect::None;
+    let mut paren: i32 = 0;
+    let mut create_paren: Option<i32> = None;
+    let mut nested: i32 = 0;
+    let mut col_phase = ColPhase::Name;
 
     for raw in significant_tokens(&complete) {
         let upper = raw.to_ascii_uppercase();
         let upper_s = upper.as_str();
+
+        if upper_s == "(" {
+            paren += 1;
+            if create_paren.is_none()
+                && clause == Clause::TableName
+                && expect != Expect::Table
+                && statement == StatementKind::Create
+            {
+                create_paren = Some(paren);
+                col_phase = ColPhase::Name;
+                clause = Clause::ColName;
+                expect = Expect::None;
+            } else if create_paren.is_some() {
+                nested += 1;
+            }
+            continue;
+        }
+        if upper_s == ")" {
+            if nested > 0 {
+                nested -= 1;
+                if nested == 0 && create_paren.is_some() {
+                    col_phase = ColPhase::Tail;
+                    clause = Clause::ColTail;
+                }
+            } else if create_paren == Some(paren) {
+                create_paren = None;
+                clause = Clause::Start;
+                expect = Expect::None;
+            }
+            paren = paren.saturating_sub(1);
+            continue;
+        }
+        if create_paren.is_some() {
+            if nested == 0 {
+                if upper_s == "," {
+                    col_phase = ColPhase::Name;
+                    clause = Clause::ColName;
+                } else if is_word(raw) {
+                    apply_col_phase(upper_s, &mut col_phase, &mut clause);
+                }
+            }
+            continue;
+        }
 
         // Join modifiers don't change expect/clause by themselves.
         if matches!(
@@ -137,10 +198,15 @@ pub fn analyze(line: &str) -> CompletionContext {
                 clause = Clause::ObjectType;
                 expect = Expect::None;
             }
-            "TABLE" | "VIEW" | "INDEX" if matches!(statement, StatementKind::Create | StatementKind::Drop) => {
+            "TABLE" | "VIEW" | "INDEX"
+                if matches!(statement, StatementKind::Create | StatementKind::Drop) =>
+            {
                 clause = Clause::TableName;
                 expect = Expect::Table;
             }
+            "IF" | "TEMPORARY" | "TEMP" | "UNLOGGED" | "GLOBAL" | "LOCAL"
+                if matches!(clause, Clause::ObjectType | Clause::TableName) => {}
+            "NOT" | "EXISTS" if clause == Clause::TableName && expect == Expect::Table => {}
             "FROM" => {
                 clause = Clause::From;
                 expect = Expect::Table;
@@ -384,11 +450,7 @@ fn split_active_token(line: &str) -> (String, String, Option<String>) {
     // `table.col` mid-token
     if let Some(dot) = trimmed_end.rfind('.') {
         let after = &trimmed_end[dot + 1..];
-        if !after.is_empty()
-            && after
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '_')
-        {
+        if !after.is_empty() && after.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
             let before_dot = &trimmed_end[..dot];
             let qual = last_ident(before_dot).unwrap_or("");
             let complete = before_dot
@@ -437,8 +499,8 @@ pub fn clause_keywords(ctx: &CompletionContext) -> &'static [&'static str] {
     match ctx.clause {
         Clause::Start => match ctx.statement {
             StatementKind::Empty => &[
-                "SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "EXPLAIN",
-                "WITH", "BEGIN", "COMMIT", "ROLLBACK", "PRAGMA",
+                "SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "EXPLAIN", "WITH",
+                "BEGIN", "COMMIT", "ROLLBACK", "PRAGMA",
             ],
             StatementKind::Insert => &["INTO"],
             StatementKind::Delete => &["FROM"],
@@ -452,9 +514,13 @@ pub fn clause_keywords(ctx: &CompletionContext) -> &'static [&'static str] {
             "AS", "JOIN", "LEFT", "RIGHT", "INNER", "OUTER", "FULL", "CROSS", "WHERE", "GROUP",
             "ORDER", "LIMIT", "UNION",
         ],
-        Clause::Join => &["AS", "ON", "USING", "JOIN", "LEFT", "RIGHT", "INNER", "WHERE"],
+        Clause::Join => &[
+            "AS", "ON", "USING", "JOIN", "LEFT", "RIGHT", "INNER", "WHERE",
+        ],
+        // Declaration order is the suggestion order (most likely first).
+        // Columns are ranked ahead of this list by the completer.
         Clause::On | Clause::Where | Clause::Having => &[
-            "AND", "OR", "NOT", "IN", "IS", "LIKE", "BETWEEN", "EXISTS", "NULL", "TRUE", "FALSE",
+            "NOT", "EXISTS", "AND", "OR", "IS", "IN", "LIKE", "BETWEEN", "NULL", "TRUE", "FALSE",
             "GROUP", "ORDER", "LIMIT", "HAVING", "JOIN",
         ],
         Clause::GroupBy => &["BY", "HAVING", "ORDER", "LIMIT"],
@@ -464,9 +530,206 @@ pub fn clause_keywords(ctx: &CompletionContext) -> &'static [&'static str] {
         Clause::Values => &[],
         Clause::Into => &["VALUES", "SELECT", "(", ")"],
         Clause::UpdateTable => &["SET", "AS"],
-        Clause::ObjectType => &["TABLE", "VIEW", "INDEX", "IF", "EXISTS"],
+        Clause::ObjectType => &[
+            "TABLE",
+            "VIEW",
+            "INDEX",
+            "IF",
+            "EXISTS",
+            "TEMPORARY",
+            "TEMP",
+        ],
         Clause::TableName => &["IF", "NOT", "EXISTS", "AS"],
+        Clause::ColName => &[
+            "PRIMARY KEY",
+            "CONSTRAINT",
+            "UNIQUE",
+            "FOREIGN KEY",
+            "CHECK",
+        ],
+        Clause::ColType => &[
+            "INTEGER",
+            "INT",
+            "TEXT",
+            "REAL",
+            "BLOB",
+            "NUMERIC",
+            "BOOLEAN",
+            "BOOL",
+            "VARCHAR",
+            "CHAR",
+            "DATE",
+            "DATETIME",
+            "TIMESTAMP",
+            "JSON",
+            "UUID",
+            "FLOAT",
+            "DOUBLE",
+            "DECIMAL",
+            "BIGINT",
+            "SMALLINT",
+            "SERIAL",
+        ],
+        Clause::ColTypeTail => &[
+            "PRECISION",
+            "VARYING",
+            "WITH",
+            "WITHOUT",
+            "TIME",
+            "ZONE",
+            "UNSIGNED",
+            "PRIMARY KEY",
+            "NOT NULL",
+            "NULL",
+            "UNIQUE",
+            "DEFAULT",
+            "REFERENCES",
+        ],
+        Clause::ColTail => &[
+            "PRIMARY KEY",
+            "NOT NULL",
+            "NULL",
+            "UNIQUE",
+            "DEFAULT",
+            "CHECK",
+            "REFERENCES",
+            "CONSTRAINT",
+            "FOREIGN KEY",
+            "COLLATE",
+            "AUTOINCREMENT",
+            "GENERATED",
+            "ON",
+            "DELETE",
+            "UPDATE",
+            "CASCADE",
+            "SET",
+        ],
+        Clause::ColKey => &["KEY"],
+        Clause::ColNot => &["NULL"],
+        Clause::ColRef => &["ON"],
     }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ColPhase {
+    Name,
+    Type,
+    TypeCont,
+    Tail,
+    AfterPrimary,
+    AfterNot,
+    AfterRef,
+}
+
+fn apply_col_phase(upper: &str, phase: &mut ColPhase, clause: &mut Clause) {
+    match *phase {
+        ColPhase::Name => {
+            if is_constraint_start(upper) {
+                enter_constraint(upper, phase, clause);
+            } else {
+                *phase = ColPhase::Type;
+                *clause = Clause::ColType;
+            }
+        }
+        ColPhase::Type | ColPhase::TypeCont => {
+            if is_constraint_word(upper) {
+                enter_constraint(upper, phase, clause);
+            } else if type_expects_more(upper) {
+                *phase = ColPhase::TypeCont;
+                *clause = Clause::ColTypeTail;
+            } else {
+                *phase = ColPhase::Tail;
+                *clause = Clause::ColTail;
+            }
+        }
+        ColPhase::Tail | ColPhase::AfterPrimary | ColPhase::AfterNot | ColPhase::AfterRef => {
+            if type_expects_more(upper) && !is_constraint_word(upper) {
+                *phase = ColPhase::TypeCont;
+                *clause = Clause::ColTypeTail;
+            } else {
+                enter_constraint(upper, phase, clause);
+            }
+        }
+    }
+}
+
+fn enter_constraint(upper: &str, phase: &mut ColPhase, clause: &mut Clause) {
+    match upper {
+        "PRIMARY" | "FOREIGN" => {
+            *phase = ColPhase::AfterPrimary;
+            *clause = Clause::ColKey;
+        }
+        "NOT" => {
+            *phase = ColPhase::AfterNot;
+            *clause = Clause::ColNot;
+        }
+        "REFERENCES" => {
+            *phase = ColPhase::AfterRef;
+            *clause = Clause::ColRef;
+        }
+        _ => {
+            *phase = ColPhase::Tail;
+            *clause = Clause::ColTail;
+        }
+    }
+}
+
+fn is_constraint_start(upper: &str) -> bool {
+    matches!(
+        upper,
+        "CONSTRAINT" | "PRIMARY" | "UNIQUE" | "FOREIGN" | "CHECK"
+    )
+}
+
+fn is_constraint_word(upper: &str) -> bool {
+    is_constraint_start(upper)
+        || matches!(
+            upper,
+            "NOT"
+                | "NULL"
+                | "KEY"
+                | "DEFAULT"
+                | "REFERENCES"
+                | "COLLATE"
+                | "AUTOINCREMENT"
+                | "AUTO_INCREMENT"
+                | "GENERATED"
+                | "ALWAYS"
+                | "IDENTITY"
+                | "STORED"
+                | "VIRTUAL"
+                | "ON"
+                | "DELETE"
+                | "UPDATE"
+                | "CASCADE"
+                | "RESTRICT"
+                | "SET"
+                | "NO"
+                | "ACTION"
+        )
+}
+
+fn type_expects_more(upper: &str) -> bool {
+    matches!(
+        upper,
+        "DOUBLE"
+            | "FLOAT"
+            | "CHARACTER"
+            | "CHAR"
+            | "NCHAR"
+            | "NATIONAL"
+            | "BIT"
+            | "TIMESTAMP"
+            | "LONG"
+            | "WITH"
+            | "WITHOUT"
+            | "TIME"
+            | "LARGE"
+    )
+}
+
+fn is_word(token: &str) -> bool {
+    is_ident(token) || matches!(token.as_bytes().first(), Some(b'"' | b'`' | b'['))
 }
 
 #[cfg(test)]
@@ -514,5 +777,27 @@ mod tests {
         assert_eq!(ctx.statement, StatementKind::Update);
         assert_eq!(ctx.clause, Clause::Set);
         assert_eq!(ctx.scope[0].table, "users");
+    }
+
+    #[test]
+    fn create_table_column_type_then_constraint() {
+        let ctx = analyze("CREATE TABLE aboba(id ");
+        assert_eq!(ctx.clause, Clause::ColType);
+        assert!(ctx.prefix.is_empty());
+
+        let ctx = analyze("CREATE TABLE aboba(id TEXT PRIMAR");
+        assert_eq!(ctx.clause, Clause::ColTail);
+        assert_eq!(ctx.prefix, "PRIMAR");
+
+        let ctx = analyze("CREATE TABLE aboba(id TEXT PRIMARY ");
+        assert_eq!(ctx.clause, Clause::ColKey);
+        assert!(ctx.prefix.is_empty());
+    }
+
+    #[test]
+    fn create_table_if_not_exists_still_reaches_columns() {
+        let ctx = analyze("CREATE TABLE IF NOT EXISTS aboba(id TEXT ");
+        assert_eq!(ctx.clause, Clause::ColTail);
+        assert!(ctx.prefix.is_empty());
     }
 }

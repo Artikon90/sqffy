@@ -80,7 +80,10 @@ impl Highlighter for ReplHelper {
 }
 
 /// Byte index where the token being completed starts.
-/// For `table.col` the start is right after `.` so only the column is replaced.
+///
+/// `table.col` starts just after `.`, so only the column is replaced.
+/// A meta-command (`.sche`) starts at the dot itself: candidates already
+/// include it (`.schema`), and replacing only the tail would produce `..schema`.
 fn completion_start(before: &str) -> usize {
     let bytes = before.as_bytes();
     let mut i = bytes.len();
@@ -91,9 +94,40 @@ fn completion_start(before: &str) -> usize {
             continue;
         }
         if c == '.' {
+            let dot = i - 1;
+            if before[..dot].chars().all(|ch| ch.is_ascii_whitespace()) {
+                return dot;
+            }
             return i;
         }
         break;
     }
     i
+}
+
+#[cfg(test)]
+mod tests {
+    use super::completion_start;
+    use crate::complete::{Completer, SchemaCache};
+
+    #[test]
+    fn meta_command_replaces_the_leading_dot() {
+        let line = ".sche";
+        let start = completion_start(line);
+        assert_eq!(start, 0);
+
+        let got = Completer::new(SchemaCache::default()).candidates(line);
+        assert!(got.iter().any(|c| c == ".schema"), "{got:?}");
+        for candidate in &got {
+            let applied = format!("{}{candidate}", &line[..start]);
+            assert_eq!(applied, candidate.as_str(), "{candidate}");
+        }
+    }
+
+    #[test]
+    fn qualified_column_still_starts_after_the_dot() {
+        assert_eq!(completion_start("users.na"), "users.".len());
+        assert_eq!(completion_start("  .ta"), 2);
+        assert_eq!(completion_start(".schema use"), ".schema ".len());
+    }
 }

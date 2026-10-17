@@ -4,4 +4,4 @@ mod highlight;
 mod tokens;
 
 pub use highlight::colorize;
-pub use tokens::{is_keyword, split_tokens, KEYWORDS};
+pub use tokens::{KEYWORDS, is_keyword, split_tokens, type_names_matching};

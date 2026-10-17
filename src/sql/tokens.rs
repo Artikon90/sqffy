@@ -9,11 +9,61 @@ pub const KEYWORDS: &[&str] = &[
     "PRIMARY", "KEY", "FOREIGN", "REFERENCES", "UNIQUE", "CHECK", "DEFAULT",
     "CONSTRAINT", "CASCADE", "REPLACE", "IF", "BEGIN", "COMMIT", "ROLLBACK",
     "PRAGMA", "ATTACH", "DETACH", "ANALYZE", "EXPLAIN", "VACUUM", "TRUE", "FALSE",
+    "TEMPORARY", "TEMP", "UNLOGGED", "NATURAL", "MATERIALIZED", "WITHOUT",
+    "GENERATED", "ALWAYS", "IDENTITY", "STORED", "VIRTUAL", "AUTOINCREMENT",
+    "AUTO_INCREMENT", "COLLATE", "ENGINE",
 ];
 
 pub fn is_keyword(token: &str) -> bool {
     let upper = token.to_ascii_uppercase();
     KEYWORDS.iter().any(|kw| *kw == upper)
+}
+
+/// Builtin SQL type names (not keywords — highlighted separately).
+const TYPES: &[&str] = &[
+    "AGGREGATEFUNCTION", "ARRAY", "BIGINT", "BIGSERIAL", "BINARY", "BINARY_DOUBLE",
+    "BINARY_FLOAT", "BIT", "BLOB", "BOOL", "BOOLEAN", "BPCHAR", "BYTEA", "CHAR",
+    "CHARACTER", "CLOB", "CITEXT", "DATE", "DATE32", "DATETIME", "DATETIME2",
+    "DATETIME64", "DEC", "DECIMAL", "DECIMAL128", "DECIMAL256", "DECIMAL32", "DECIMAL64",
+    "DOUBLE", "ENUM", "ENUM16", "ENUM8", "FIXEDSTRING", "FLOAT", "FLOAT32", "FLOAT4",
+    "FLOAT64", "FLOAT8", "GEOGRAPHY", "GEOMETRY", "HSTORE", "IMAGE", "INET", "INT",
+    "INT128", "INT16", "INT2", "INT256", "INT32", "INT4", "INT64", "INT8", "INTEGER",
+    "INTERVAL", "IPV4", "IPV6", "JSON", "JSONB", "LONGBLOB", "LONGTEXT", "LOWCARDINALITY",
+    "MACADDR", "MACADDR8", "MAP", "MEDIUMBLOB", "MEDIUMINT", "MEDIUMTEXT", "MONEY",
+    "NCHAR", "NCLOB", "NESTED", "NOTHING", "NULLABLE", "NUMBER", "NUMERIC", "NVARCHAR",
+    "NVARCHAR2", "OID", "POINT", "RAW", "REAL", "REGCLASS", "SERIAL", "SERIAL2",
+    "SERIAL4", "SERIAL8", "SIMPLEAGGREGATEFUNCTION", "SMALLDATETIME", "SMALLINT",
+    "SMALLMONEY", "SMALLSERIAL", "STRING", "TEXT", "TIME", "TIMESTAMP", "TIMESTAMPTZ",
+    "TIMESTAMP_LTZ", "TIMESTAMP_NTZ", "TIMESTAMP_TZ", "TINYBLOB", "TINYINT", "TINYTEXT",
+    "TUPLE", "UINT128", "UINT16", "UINT256", "UINT32", "UINT64", "UINT8", "UUID",
+    "VARBINARY", "VARCHAR", "VARCHAR2", "XML", "XMLTYPE", "YEAR",
+];
+
+pub fn is_type_name(token: &str) -> bool {
+    let upper = token.to_ascii_uppercase();
+    TYPES.iter().any(|ty| *ty == upper)
+}
+
+/// Type names that start with `prefix` (case-insensitive). Empty prefix returns none
+/// so callers can show a short common list instead of every dialect type.
+pub fn type_names_matching(prefix: &str) -> Vec<&'static str> {
+    if prefix.is_empty() {
+        return Vec::new();
+    }
+    let upper = prefix.to_ascii_uppercase();
+    TYPES
+        .iter()
+        .copied()
+        .filter(|ty| ty.starts_with(&upper))
+        .collect()
+}
+
+/// Second (or later) word of a multi-word type: `DOUBLE PRECISION`, `INT UNSIGNED`.
+pub fn is_type_modifier(token: &str) -> bool {
+    matches!(
+        token.to_ascii_uppercase().as_str(),
+        "PRECISION" | "VARYING" | "UNSIGNED" | "SIGNED" | "ZEROFILL" | "ZONE" | "NATIONAL"
+    )
 }
 
 /// Split SQL into whitespace / identifiers / strings / punctuation tokens.

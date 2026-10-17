@@ -71,8 +71,13 @@ impl Completer {
             Clause::Start => {
                 push_kw(&mut keywords, context::clause_keywords(ctx), &ctx.prefix);
             }
-            Clause::SelectList | Clause::On | Clause::Where | Clause::Having | Clause::Set
-            | Clause::GroupBy | Clause::OrderBy => {
+            Clause::SelectList
+            | Clause::On
+            | Clause::Where
+            | Clause::Having
+            | Clause::Set
+            | Clause::GroupBy
+            | Clause::OrderBy => {
                 for col in self.cache.columns_for_scope(&ctx.scope) {
                     if prefix_match(&col, &ctx.prefix) {
                         columns.push(col);
@@ -85,11 +90,30 @@ impl Completer {
                 }
                 push_kw(&mut keywords, context::clause_keywords(ctx), &ctx.prefix);
             }
-            Clause::From | Clause::Join | Clause::Into | Clause::UpdateTable | Clause::TableName => {
+            Clause::From
+            | Clause::Join
+            | Clause::Into
+            | Clause::UpdateTable
+            | Clause::TableName => {
                 self.push_matching_tables(&mut tables, &ctx.prefix);
                 push_kw(&mut keywords, context::clause_keywords(ctx), &ctx.prefix);
             }
-            Clause::ObjectType => {
+            Clause::ObjectType
+            | Clause::ColName
+            | Clause::ColTypeTail
+            | Clause::ColTail
+            | Clause::ColKey
+            | Clause::ColNot => {
+                push_kw(&mut keywords, context::clause_keywords(ctx), &ctx.prefix);
+            }
+            Clause::ColType => {
+                push_kw(&mut keywords, context::clause_keywords(ctx), &ctx.prefix);
+                for name in crate::sql::type_names_matching(&ctx.prefix) {
+                    push_unique(&mut keywords, name.to_string());
+                }
+            }
+            Clause::ColRef => {
+                self.push_matching_tables(&mut tables, &ctx.prefix);
                 push_kw(&mut keywords, context::clause_keywords(ctx), &ctx.prefix);
             }
             Clause::Values | Clause::Limit => {
@@ -102,11 +126,7 @@ impl Completer {
             && ctx.clause == Clause::Start
             && keywords.is_empty()
         {
-            push_kw(
-                &mut keywords,
-                context::clause_keywords(ctx),
-                &ctx.prefix,
-            );
+            push_kw(&mut keywords, context::clause_keywords(ctx), &ctx.prefix);
         }
 
         finalize(columns, tables, keywords)
@@ -169,7 +189,10 @@ fn push_kw(out: &mut Vec<String>, kws: &[&str], prefix: &str) {
 }
 
 fn prefix_match(value: &str, prefix: &str) -> bool {
-    prefix.is_empty() || value.to_ascii_lowercase().starts_with(&prefix.to_ascii_lowercase())
+    prefix.is_empty()
+        || value
+            .to_ascii_lowercase()
+            .starts_with(&prefix.to_ascii_lowercase())
 }
 
 fn push_unique(out: &mut Vec<String>, value: String) {
@@ -178,12 +201,16 @@ fn push_unique(out: &mut Vec<String>, value: String) {
     }
 }
 
-/// Order: columns → tables → keywords; sort within each bucket.
-fn finalize(mut columns: Vec<String>, mut tables: Vec<String>, mut keywords: Vec<String>) -> Vec<String> {
+/// Order: columns → tables → keywords.
+/// Names are alphabetical. Keywords keep the likelihood order from `clause_keywords`.
+fn finalize(
+    mut columns: Vec<String>,
+    mut tables: Vec<String>,
+    keywords: Vec<String>,
+) -> Vec<String> {
     let sort_ci = |v: &mut Vec<String>| v.sort_by_key(|s| s.to_ascii_lowercase());
     sort_ci(&mut columns);
     sort_ci(&mut tables);
-    sort_ci(&mut keywords);
 
     let mut out = Vec::with_capacity(columns.len() + tables.len() + keywords.len());
     for c in columns {
@@ -206,14 +233,7 @@ mod tests {
 
     fn sample_cache() -> SchemaCache {
         let mut columns = HashMap::new();
-        columns.insert(
-            "users".into(),
-            vec![
-                col("id"),
-                col("name"),
-                col("email"),
-            ],
-        );
+        columns.insert("users".into(), vec![col("id"), col("name"), col("email")]);
         columns.insert(
             "orders".into(),
             vec![col("id"), col("user_id"), col("total")],
@@ -253,8 +273,24 @@ mod tests {
         assert!(got.iter().any(|s| s == "name"));
         // `total` is only on orders — should not appear when scope is users
         assert!(!got.iter().any(|s| s == "total"));
-        // clause keyword still available
-        assert!(got.iter().any(|s| s == "NOT" || s == "NULL"));
+        // clause keyword still available, after the column
+        let name_at = got.iter().position(|s| s == "name").unwrap();
+        let not_at = got.iter().position(|s| s == "NOT").unwrap();
+        assert!(name_at < not_at, "{got:?}");
+    }
+
+    #[test]
+    fn where_lists_columns_then_keywords() {
+        let c = Completer::new(sample_cache());
+        let got = c.candidates("SELECT * FROM users WHERE ");
+        let expected = [
+            "email", "id", "name", "NOT", "EXISTS", "AND", "OR", "IS", "IN", "LIKE", "BETWEEN",
+            "NULL", "TRUE", "FALSE", "GROUP", "ORDER", "LIMIT", "HAVING", "JOIN",
+        ];
+        assert_eq!(
+            got.iter().map(String::as_str).collect::<Vec<_>>(),
+            expected
+        );
     }
 
     #[test]
@@ -308,5 +344,23 @@ mod tests {
         let c = Completer::new(sample_cache());
         let got = c.candidates("SELECT id F");
         assert!(got.iter().any(|s| s == "FROM"));
+    }
+
+    #[test]
+    fn create_table_suggests_type_and_primary_key() {
+        let c = Completer::new(sample_cache());
+
+        let types = c.candidates("CREATE TABLE aboba(id ");
+        assert!(types.iter().any(|s| s == "TEXT"), "{types:?}");
+        assert!(types.iter().any(|s| s == "INTEGER"), "{types:?}");
+
+        let partial = c.candidates("CREATE TABLE aboba(id TE");
+        assert!(partial.iter().any(|s| s == "TEXT"), "{partial:?}");
+
+        let keys = c.candidates("CREATE TABLE aboba(id TEXT PRIMAR");
+        assert!(keys.iter().any(|s| s == "PRIMARY KEY"), "{keys:?}");
+
+        let after_primary = c.candidates("CREATE TABLE aboba(id TEXT PRIMARY ");
+        assert_eq!(after_primary, vec!["KEY".to_string()]);
     }
 }
